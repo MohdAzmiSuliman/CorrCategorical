@@ -1,0 +1,99 @@
+---
+title: "Correlated Categorical Data"
+author: "Mohd Azmi"
+date: "10/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(pacman)
+p_load(aplore3, tidyverse, knitr, broom, summarytools, gee, lme4, sjPlot, HSAUR2, ggplot2)
+```
+
+```{r}
+myds0 <- glow_rand
+head(myds0)
+```
+
+```{r}
+myds1 <- myds0 %>% 
+  mutate(weight5 = weight/5,
+         frac2 = as.numeric(fracture)-1)
+
+freq(myds1$fracture)
+descr(myds1$frac2)
+```
+# GEE model
+
+```{r}
+glow_gee0 <- gee(fracture ~ weight5 + raterisk + armassist, id=site_id,
+                data = myds1, family = binomial(), corstr = "independence", maxiter = 100)
+glow_gee0
+```
+
+```{r}
+glow_gee <- gee(frac2 ~ weight5 + raterisk + armassist, id=site_id,
+                data = myds1, family = binomial(), corstr = "independence", maxiter = 100)
+glow_gee
+```
+
+```{r}
+coef(glow_gee)
+exp(coef(glow_gee))
+```
+
+# Conditional model - clustered specific
+
+## random intercept
+
+```{r}
+glow_lme <- glmer(fracture ~ weight5 + raterisk + armassist + (1|site_id),
+                  family = binomial, nAGQ = 20, data = myds1)
+summary(glow_lme)
+```
+
+### fixed effect
+
+```{r}
+cbind(fixef(glow_lme), exp(fixef(glow_lme)))
+```
+
+### fixed effect CI
+
+```{r}
+glowlme_feci <- confint(glow_lme, parm = "beta_")
+
+cbind(glowlme_feci, exp(glowlme_feci))
+```
+
+### Random Effect
+
+```{r}
+glowlme_ranef <- ranef(glow_lme)
+glowlme_ranef
+```
+
+```{r}
+glowlme_intercept <- data.frame(glowlme_ranef$site_id, cons = -.471, glowlme_ranef$site_id-.471)
+colnames(glowlme_intercept) <- c("Random Effect", "Overall Intercept", "Predicted Intercept")
+glowlme_intercept
+
+```
+
+### plot
+
+```{r}
+sjp.lmer(glow_lme, y.offset=0.5)
+```
+
+### Prediction
+
+```{r}
+glowlme_predprob <- augment(glow_lme, predict.type = "response")
+head(glowlme_predprob)
+```
+
