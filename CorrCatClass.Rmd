@@ -150,3 +150,19 @@ anova(commglmermod0, commglmermod0_RSwealth)
 
 ```
 
+# Model 2
+
+```{r}
+antemedglmer0_wealthRS <- glmer(antemed ~ mage + wealth + (1 + wealth| comm),
+                       family = binomial, data = myds2)
+summary(antemedglmer0_wealthRS)
+```
+
+## Prediction
+
+```{r}
+antemedglmer0_wealthRS_predlogodd <- augment(antemedglmer0_wealthRS)
+antemedglmer0_wealthRS_predlogodd
+
+```
+
