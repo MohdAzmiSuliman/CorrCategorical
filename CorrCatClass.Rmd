@@ -29,11 +29,6 @@ descr(myds1$frac2)
 ```
 # GEE model
 
-```{r}
-glow_gee0 <- gee(fracture ~ weight5 + raterisk + armassist, id=site_id,
-                data = myds1, family = binomial(), corstr = "independence", maxiter = 100)
-glow_gee0
-```
 
 ```{r}
 glow_gee <- gee(frac2 ~ weight5 + raterisk + armassist, id=site_id,
@@ -87,13 +82,71 @@ glowlme_intercept
 ### plot
 
 ```{r}
+p_load(sjPlot)
 sjp.lmer(glow_lme, y.offset=0.5)
 ```
 
 ### Prediction
 
 ```{r}
-glowlme_predprob <- augment(glow_lme, predict.type = "response")
-head(glowlme_predprob)
+glowlmw_predprob <- predict(glow_lme, type = "response")
+head(glowlmw_predprob)
+```
+
+
+```{r}
+glowlme_predlogodd <- augment(glow_lme) #same with predit (type=link)
+head(glowlme_predlogodd)
+```
+
+## Level 2 predictor - SITE
+
+```{r}
+newds1 <- expand.grid(site_id = c(1:6),
+                        armassist = c('Yes', 'No'),
+                        raterisk = c('Less', 'Same', 'Greater'),
+                        weight5 = mean(myds1$weight5))
+newds1
+```
+
+```{r}
+glowlme_newds_predlogodd <- augment(glow_lme, newdata = newds1) #same with predit (type=link)
+glowlme_newds_predlogodd
+```
+
+
+```{r}
+glowlme_newds_predprob <- predict(glow_lme, newdata = newds1, type = "response")
+cbind(newds1, glowlme_newds_predprob, glowlme_newds_predlogodd$.fitted)
+```
+
+# Multilevel random intercept & random slope
+
+```{r}
+myds2 <- read.table("7.5.txt", header = TRUE, sep = ",")
+head(myds2)
+```
+
+## Estimation
+
+### multiple RI
+
+```{r}
+commglmermod0 <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1|comm), data = myds2, family = binomial())
+summary(commglmermod0)
+```
+
+### RS for wealthc
+
+```{r}
+commglmermod0_RSwealth <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1+ wealthc|comm), data = myds2, family = binomial())
+summary(commglmermod0_RSwealth)
+```
+
+### confirm RS for wealthc - by ANOVA
+
+```{r}
+anova(commglmermod0, commglmermod0_RSwealth)
+
 ```
 
