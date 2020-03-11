@@ -166,3 +166,51 @@ antemedglmer0_wealthRS_predlogodd
 
 ```
 
+# Longitudinal Data - toenail
+
+```{r}
+myds3 <- toenail
+myds3
+descr(myds3)
+freq(myds3)
+```
+
+```{r}
+ggplot(myds3, aes(visit)) +
+  geom_bar(aes(fill=outcome)) +
+  facet_grid(treatment~.) +
+  scale_x_continuous(breaks = seq(0,8,1))
+```
+## GEE model - pop average model
+
+
+```{r}
+myds3_1 <- myds3 %>% 
+  mutate(outcome2 = as.numeric(outcome)-1)
+myds3_1
+
+gee_toe <- gee(outcome2 ~ treatment + visit, id = patientID,
+               data = myds3_1, family = binomial, corstr = "exchangeable", 
+               scale.fix = T, scale.value = 1)
+summary(gee_toe)
+```
+
+## Random Intercept
+
+```{r}
+glmertoe1 <- glmer(outcome ~ treatment*time + (1|patientID),
+                   data = myds3, family=binomial, nAGQ = 20)
+summary(glmertoe1)
+```
+
+### OR CI
+
+```{r}
+cbind(fixef(glmertoe1), exp(fixef(glmertoe1)))
+```
+
+```{r}
+print(exp(cbind(est = fixef(glmertoe1), confint(glmertoe1, parm = "beta_"))), digits=3)
+```
+
+### Prediction
