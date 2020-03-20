@@ -83,7 +83,7 @@ glowlme_intercept
 
 ```{r}
 p_load(sjPlot)
-sjp.lmer(glow_lme, y.offset=0.5)
+#sjp.lmer(glow_lme, y.offset=0.5)
 ```
 
 ### Prediction
