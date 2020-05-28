@@ -9,16 +9,39 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+#Environment
+
+##Library
+
 ```{r}
 library(pacman)
 p_load(aplore3, tidyverse, knitr, broom, summarytools, gee, lme4, sjPlot, HSAUR2, ggplot2)
 ```
 
+
+##Dataset
 ```{r}
 myds0 <- glow_rand
-head(myds0)
+myds0
 ```
 
+# Data Exploration
+
+## No of groups
+
+site id
+```{r}
+myds0 %>% count(site_id)
+```
+
+no of id for each site
+```{r}
+myds0 %>% count(site_id, phy_id)
+```
+
+
+
+## Data wrangling
 ```{r}
 myds1 <- myds0 %>% 
   mutate(weight5 = weight/5,
@@ -81,10 +104,16 @@ glowlme_intercept
 
 ### plot
 
+Fixed Effect
 ```{r}
-p_load(sjPlot)
-#sjp.lmer(glow_lme, y.offset=0.5)
+plot_model(glow_lme, type = "est")
 ```
+
+random effect
+```{r}
+plot_model(glow_lme, type = "re")
+```
+
 
 ### Prediction
 
@@ -95,7 +124,7 @@ head(glowlmw_predprob)
 
 
 ```{r}
-glowlme_predlogodd <- augment(glow_lme) #same with predit (type=link)
+glowlme_predlogodd <- augment(glow_lme) #same with predict (type=link)
 head(glowlme_predlogodd)
 ```
 
