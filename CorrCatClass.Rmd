@@ -58,8 +58,9 @@ glow_logreg <- glm(fracture ~ weight5 + raterisk + armassist, data = myds1, fami
 summary(glow_logreg)
 ```
 
+# Multilevel Random Intercept Model
 
-# GEE model
+## GEE model
 
 ```{r}
 glow_gee <- gee(frac2 ~ weight5 + raterisk + armassist, id=site_id,
@@ -72,9 +73,9 @@ coef(glow_gee)
 exp(coef(glow_gee))
 ```
 
-# Conditional model - clustered specific
+## Conditional Model - Clustered Specific
 
-## random intercept
+### Random Intercept
 
 ```{r}
 glow_lme <- glmer(fracture ~ weight5 + raterisk + armassist + (1|site_id),
@@ -82,11 +83,24 @@ glow_lme <- glmer(fracture ~ weight5 + raterisk + armassist + (1|site_id),
 summary(glow_lme)
 ```
 
-### fixed effect
+```{r}
+glow_lme_tidy<- tidy(glow_lme, conf.int=T, effects = "fixed")
+glow_lme_tidy
+```
+
+
+## Fixed Effect
 
 ```{r}
 cbind(fixef(glow_lme), exp(fixef(glow_lme)))
 ```
+
+alternatively
+
+```{r}
+glow_lme_tidy %>% mutate(or = exp(estimate))
+```
+
 
 ### fixed effect CI
 
@@ -96,7 +110,16 @@ glowlme_feci <- confint(glow_lme, parm = "beta_")
 cbind(glowlme_feci, exp(glowlme_feci))
 ```
 
-### Random Effect
+alternatively
+
+```{r}
+glow_lme_tidy %>% mutate(or = exp(estimate),
+                         lci = exp(conf.low),
+                         uci = exp(conf.high))
+```
+
+
+## Random Effect
 
 ```{r}
 glowlme_ranef <- ranef(glow_lme)
@@ -110,31 +133,50 @@ glowlme_intercept
 
 ```
 
-### plot
+##Plot
 
-Fixed Effect
+###Fixed Effect
+
 ```{r}
 plot_model(glow_lme, type = "est")
 ```
 
-random effect
+###Random Effect
 ```{r}
 plot_model(glow_lme, type = "re")
 ```
 
 
-### Prediction
+## Prediction/estimation - Level 1 - Subject
+
+### Predicted probability
 
 ```{r}
 glowlmw_predprob <- predict(glow_lme, type = "response")
-head(glowlmw_predprob)
+head(glowlmw_predprob, 10)
 ```
 
+### Predicted logit
+
+```{r}
+glowlmw_predlogit <- predict(glow_lme, type = "link")
+head(glowlmw_predlogit, 10)
+```
+alternatively
 
 ```{r}
 glowlme_predlogodd <- augment(glow_lme) #same with predict (type=link)
 head(glowlme_predlogodd)
 ```
+
+### logit/logodd and probability relationship
+
+probability = (odd a)/(1- odd a)
+
+```{r}
+head(exp(glowlmw_predlogit)/(1 + exp(glowlmw_predlogit)),10) #same with predict (type = "response")
+```
+
 
 ## Level 2 predictor - SITE
 
@@ -146,52 +188,82 @@ newds1 <- expand.grid(site_id = c(1:6),
 newds1
 ```
 
+
+### predict log odd for each site
+
 ```{r}
-glowlme_newds_predlogodd <- augment(glow_lme, newdata = newds1) #same with predit (type=link)
+glowlme_newds_predlogodd <- augment(glow_lme, newdata = newds1) #same with predict (type=link)
 glowlme_newds_predlogodd
 ```
 
+### predict probability for each site
 
 ```{r}
 glowlme_newds_predprob <- predict(glow_lme, newdata = newds1, type = "response")
-cbind(newds1, glowlme_newds_predprob, glowlme_newds_predlogodd$.fitted)
+newds1 %>% mutate("Predicted Probability" = glowlme_newds_predprob,
+                  "Predicted Log Odds"= glowlme_newds_predlogodd$.fitted)
 ```
+
+
 
 # Multilevel random intercept & random slope
 
 ```{r}
 myds2 <- read.table("7.5.txt", header = TRUE, sep = ",")
-head(myds2)
+myds2
 ```
+
+from http://www.bristol.ac.uk/cmm/media/learning/lemma/7-r-sample.pdf
+
+- comm = Community identifier
+- womid = Woman identifier
+- antemed = Received antenatal care at least once from a medically-trained provider, e.g. doctor, nurse or midwife (1=yes, 0=no)
+- bord = Birth order of child (ranges from 1 to 13)
+- mage = Mother’s age at the child’s birth (in years)
+- urban = Type of region of residence at survey (1=urban, 0=rural)
+- meduc = Mother’s  level  of  education  at  survey  (1=none,  2=primary,3=secondary or higher)
+- islam = Mother’s religion (1=Islam, 0=other)
+- wealth = Household wealth index in quintiles (1=poorest to 5=richest)
+
+```{r}
+myds2 %>% count(comm)
+```
+
 
 ## Estimation
 
 ### multiple RI
 
 ```{r}
-commglmermod0 <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1|comm), data = myds2, family = binomial())
+commglmermod0 <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1|comm),
+                       data = myds2, family = binomial(),
+                       glmerControl(calc.derivs = F))
 summary(commglmermod0)
 ```
 
 ### RS for wealthc
 
 ```{r}
-commglmermod0_RSwealth <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1+ wealthc|comm), data = myds2, family = binomial())
+commglmermod0_RSwealth <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (1+ wealthc|comm),
+                                data = myds2, family = binomial(),
+                                glmerControl(calc.derivs = F))
 summary(commglmermod0_RSwealth)
 ```
 
 ### confirm RS for wealthc - by ANOVA
 
+comparison using chi-square test --> which is wald test
+
 ```{r}
 anova(commglmermod0, commglmermod0_RSwealth)
-
 ```
 
 # Model 2
 
 ```{r}
 antemedglmer0_wealthRS <- glmer(antemed ~ mage + wealth + (1 + wealth| comm),
-                       family = binomial, data = myds2)
+                       family = binomial, data = myds2,
+                       glmerControl(calc.derivs = F))
 summary(antemedglmer0_wealthRS)
 ```
 
@@ -202,6 +274,28 @@ antemedglmer0_wealthRS_predlogodd <- augment(antemedglmer0_wealthRS)
 antemedglmer0_wealthRS_predlogodd
 
 ```
+
+## Plot
+
+### Fixed Effect Plot
+
+```{r}
+plot_model(antemedglmer0_wealthRS)
+```
+
+### Random Effect Plot
+
+```{r}
+plot_model(antemedglmer0_wealthRS, type = "re")
+```
+
+### Predict vs Marginal Effect plot
+
+```{r}
+plot_model(antemedglmer0_wealthRS, type = "pred", vars = "mage")
+```
+
+
 
 # Longitudinal Data - toenail
 
@@ -218,8 +312,17 @@ ggplot(myds3, aes(visit)) +
   facet_grid(treatment~.) +
   scale_x_continuous(breaks = seq(0,8,1))
 ```
-## GEE model - pop average model
 
+## logistic regression model
+
+```{r}
+logreg_toe <- glm(outcome ~ treatment + visit,
+                  data = myds3, family = binomial)
+summary(logreg_toe)
+```
+
+
+## GEE model - pop average model
 
 ```{r}
 myds3_1 <- myds3 %>% 
