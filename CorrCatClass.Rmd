@@ -50,8 +50,16 @@ myds1 <- myds0 %>%
 freq(myds1$fracture)
 descr(myds1$frac2)
 ```
-# GEE model
 
+# Revision - logistic regression
+
+```{r}
+glow_logreg <- glm(fracture ~ weight5 + raterisk + armassist, data = myds1, family = binomial())
+summary(glow_logreg)
+```
+
+
+# GEE model
 
 ```{r}
 glow_gee <- gee(frac2 ~ weight5 + raterisk + armassist, id=site_id,
