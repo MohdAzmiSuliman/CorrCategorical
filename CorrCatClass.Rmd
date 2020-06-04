@@ -26,12 +26,20 @@ myds0
 ```
 
 refer Hosmer Applied Logistic Regression (3rd ed) - [page 324]
-
+GLOW = global longitudinal study of osteoporosis in women
 - 6 site
   - smallest no of subject - site 4 (24 subject)
   - largest no of subject - site 2 (113 subject)
 - 124 physician - cluster size from 1 - 13 physician in various cluster
-- (outcome) - fracture - occurence of fracture 
+- (outcome) - fracture - occurrence of fracture within 1 year
+- other
+  - priorfrac - history of prior frac
+  - age - age at enrolment
+  - weight - weight at enrolment
+  - height - height at enrolment
+  - raterisk - self-reported risk of fracture (1 - less than other, 2 - same with other, 3 - greater than other)
+  - armassist - arms are needed to stand from chair
+
 
 # Data Exploration
 
@@ -44,7 +52,7 @@ myds0 %>% count(site_id)
 
 no of id for each site
 ```{r}
-myds0 %>% count(site_id, phy_id)
+myds0 %>% group_by(site_id) %>% count(phy_id)
 ```
 
 
@@ -361,4 +369,79 @@ cbind(fixef(glmertoe1), exp(fixef(glmertoe1)))
 print(exp(cbind(est = fixef(glmertoe1), confint(glmertoe1, parm = "beta_"))), digits=3)
 ```
 
+alternatively
+
+```{r}
+glmertoe1_tidy <- tidy(glmertoe1, conf.int=T, effects = "fixed")
+glmertoe1_tidy <- glmertoe1_tidy %>% mutate(OR = exp(estimate),
+                                            "OR LCI" = exp(conf.low),
+                                            "OR UCI" = exp(conf.high))
+glmertoe1_tidy
+```
+
+
+
+
 ### Prediction
+
+```{r}
+fixef(glmertoe1)
+```
+
+
+#### Predicted Log Odd 
+
+```{r}
+glmertoe1_predlogodd <-augment(glmertoe1) #same with predict type = "link"
+glmertoe1_predlogodd
+```
+
+#### Predicted Probability
+
+formula = exp(pred log odd)/[1+exp(pred log odd)]
+
+```{r}
+options(scipen = 999)
+glmertoe1_prediction <- glmertoe1_predlogodd %>%
+  mutate("Predicted Log Odd" = .fitted,
+         "Predicted Probability" = exp(.fitted)/(1+exp(.fitted))) %>% 
+  select(outcome, treatment, time, patientID, "Predicted Log Odd", "Predicted Probability")
+print(glmertoe1_prediction, digits = 5)
+```
+
+#### Plot Prediction
+
+newdata
+```{r}
+newds2_toe <- expand.grid(treatment = c("itraconazole", "terbinafine"), time = seq(1,18))
+newds2_toe
+```
+
+prediction
+```{r}
+newds2_toe_prediction <- newds2_toe %>% 
+  mutate("Predicted Probability" = predict(glmertoe1, newdata = newds2_toe, type = "response", re.form = ~0))
+
+#no augment to predict without random effect
+```
+
+plot
+```{r}
+ggplot(newds2_toe_prediction, aes(x=time, y=`Predicted Probability`)) +
+  geom_point() + 
+  facet_grid(.~treatment)
+```
+
+## Plot Model
+
+```{r}
+glmertoe1
+glmertoe1@beta #fixed effect
+glmertoe1@u #random effect
+```
+
+```{r}
+plot_model(glmertoe1)
+plot_model(glmertoe1, type = "pred", vars = "time")
+```
+
