@@ -25,6 +25,14 @@ myds0 <- glow_rand
 myds0
 ```
 
+refer Hosmer Applied Logistic Regression (3rd ed) - [page 324]
+
+- 6 site
+  - smallest no of subject - site 4 (24 subject)
+  - largest no of subject - site 2 (113 subject)
+- 124 physician - cluster size from 1 - 13 physician in various cluster
+- (outcome) - fracture - occurence of fracture 
+
 # Data Exploration
 
 ## No of groups
