@@ -97,6 +97,11 @@ exp(coef(glow_gee))
 glow_lme <- glmer(fracture ~ weight5 + raterisk + armassist + (1|site_id),
                   family = binomial, nAGQ = 20, data = myds1)
 summary(glow_lme)
+
+
+glow_lme2 <- glmer(fracture ~ weight5 + raterisk + armassist + (1+weight5|site_id),
+                  family = binomial, data = myds1)
+summary(glow_lme2)
 ```
 
 ```{r}
@@ -255,6 +260,7 @@ commglmermod0 <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + wealthc + (
                        data = myds2, family = binomial(),
                        glmerControl(calc.derivs = F))
 summary(commglmermod0)
+str(myds2)
 ```
 
 ### RS for wealthc
@@ -265,6 +271,12 @@ commglmermod0_RSwealth <- glmer(antemed ~ magec + magecsq + meduc2 + meduc3 + we
                                 glmerControl(calc.derivs = F))
 summary(commglmermod0_RSwealth)
 ```
+
+```{r}
+head(ranef(commglmermod0_RSwealth), 5)
+```
+
+
 
 ### confirm RS for wealthc - by ANOVA
 
@@ -354,6 +366,7 @@ summary(gee_toe)
 ## Random Intercept
 
 ```{r}
+
 glmertoe1 <- glmer(outcome ~ treatment*time + (1|patientID),
                    data = myds3, family=binomial, nAGQ = 20)
 summary(glmertoe1)
@@ -417,16 +430,27 @@ newds2_toe <- expand.grid(treatment = c("itraconazole", "terbinafine"), time = s
 newds2_toe
 ```
 
+
 prediction
+
+```{r}
+ggplot(glmertoe1_prediction, aes(x=time, y=`Predicted Probability`)) + geom_point() + geom_smooth() + 
+  facet_grid(.~treatment)
+#no augment to predict without random effect
+```
+
 ```{r}
 newds2_toe_prediction <- newds2_toe %>% 
   mutate("Predicted Probability" = predict(glmertoe1, newdata = newds2_toe, type = "response", re.form = ~0))
 
-#no augment to predict without random effect
+newds2_toe_prediction
 ```
 
 plot
 ```{r}
+ggplot(newds2_toe_prediction, aes(x=time, y=`Predicted Probability`, colour = treatment)) +
+  geom_point() + geom_line()
+
 ggplot(newds2_toe_prediction, aes(x=time, y=`Predicted Probability`)) +
   geom_point() + 
   facet_grid(.~treatment)
